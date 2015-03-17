@@ -1,0 +1,74 @@
+Export PDF
+1. upZip files extensions.zip to extensions directory
+2. config/main.php
+'components'=>array(
+......
+	'ePdf' => array(
+		'class'     => 'ext.yii-pdf.EYiiPdf',
+		'params'    => array(
+			'mpdf'  => array(
+					'librarySourcePath' => 'application.extensions.mpdf.*',
+					'constants'         => array(
+							'_MPDF_TEMP_PATH' => Yii::getPathOfAlias('application.runtime'),
+					),
+					'class'=>'mpdf', // the literal class filename to be loaded from the vendors folder.
+					'defaultParams'     => array( // More info: http://mpdf1.com/manual/index.php?tid=184
+							'mode'              => 'UTF-8', //  This parameter specifies the mode of the new document.
+							'format'            => 'A4', // format A4, A5, ...
+							'default_font_size' => 0, // Sets the default document font size in points (pt)
+							'default_font'      => '', // Sets the default font-family for the new document.
+							'mgl'               => 12, // margin_left. Sets the page margins for the new document.
+							'mgr'               => 12, // margin_right
+							'mgt'               => 15, // margin_top
+							'mgb'               => 15, // margin_bottom
+							'mgh'               => 6, // margin_header
+							'mgf'               => 6, // margin_footer
+							'orientation'       => 'P', // landscape or portrait orientation
+					)
+			),
+		)
+	),
+3. create function exportPDF like this on your controller
+public function exportPdf($book, $path)
+	{
+		# mPDF
+		$mPDF1 = Yii::app()->ePdf->mpdf();
+		# set header
+		$mPDF1 -> defaultheaderline = 0;
+		$mPDF1 -> defaultheaderfontstyle = 'I';
+		$mPDF1 -> setHeader('||exported date : {DATE j-m-Y}');
+		# set page number on the footer
+		$mPDF1 -> pagenumPrefix = 'Page ';
+		$mPDF1 -> pagenumSuffix = ' of ';
+		$mPDF1 -> defaultfooterline = 0;
+		$mPDF1 -> defaultfooterfontstyle = 'I';
+		$mPDF1 -> setFooter('||{PAGENO}{nb}');
+		# set support Thai font
+		$mPDF1->SetAutoFont(AUTOFONT_ALL);
+		# don't need complex table
+		$mpdf1 -> simpleTables = true;
+		# not mind the extra processing time
+		$mpdf1 -> packTableData = true;
+	
+		$mPDF1->WriteHTML($book->content);
+		
+		# Outputs ready PDF
+		//$time = date("d_m_Y", strtotime(date("D M j G:i:s T Y")));
+		//$mPDF1->Output('all_products_'.$time.'.pdf',EYiiPdf::OUTPUT_TO_DOWNLOAD);
+		$filename = iconv('UTF-8','windows-874', $book->name);
+		$mPDF1->Output($path.$filename.'.pdf', EYiiPdf::OUTPUT_TO_FILE);
+		//exit;
+}
+
+4. on action create and/or update
+if($model->save()){
+	// path for file upload
+	$path = Yii::getPathOfAlias('webroot').'/files/';
+	$this->exportPdf($model, $path);
+	$this->redirect(array('view','id'=>$model->id));
+}
+
+5. create folder for file upload on your_project_name\files
+
+// Chalasai Muangsamai // 
+For more information: http://www.mpdf1.com/mpdf/index.php
